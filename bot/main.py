@@ -6,7 +6,7 @@ import asyncio
 import re
 import requests
 
-
+TOKEN = os.getenv("DISCORD_TOKEN")
 def getTokensByDiscordId(discordId="0"):
     url = "https://oneverse-backend.vercel.app/api/admin/" + str(
         discordId);
@@ -165,4 +165,4 @@ async def refresh(ctx):
     refreshOn = False
 
 
-client.run("Token")
+client.run(TOKEN)
