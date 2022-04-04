@@ -7,28 +7,46 @@ import re
 import requests
 
 TOKEN = os.getenv("DISCORD_TOKEN")
-def getTokensByDiscordId(discordId="0"):
-    url = "https://oneverse-backend.vercel.app/api/admin/" + str(
-        discordId);
+
+def getTokensByDiscordId(discordId="0",recursionCount = 0):
+    url = "https://oneverse-discord-bot.herokuapp.com/admin/" + str(discordId)
     resp = requests.get(url)
-    return resp.json()
+    status = resp.status_code
+    recursionCount += 1
+    if status != 200 and recursionCount < 5:
+        getTokensByDiscordId(discordId,recursionCount)
+    else:
+        if status == 200:
+            return resp.json()
+        else: return resp.json()
 
 
-def getUsers(page=1):
-    url = "https://oneverse-backend.vercel.app/api/admin/get?page=" + str(page)
+
+def getUsers(page=1,recursionCount = 0):
+    url = "https://oneverse-discord-bot.herokuapp.com/admin/get?page=" + str(
+        page)
     resp = requests.get(url)
-    return resp.json()
+    status = resp.status_code
+    recursionCount += 1
+    print(recursionCount)
+    if status!=200 and recursionCount < 5:
+        getUsers(page,recursionCount)
+    else:
+        if status == 200:
+            return resp.json()
+        else: return resp.json()
+
+
 
 def createUser(token="", discordId=""):
-    data = {"token": token, "discordId": discordId};
+    data = {"token": token, "discordId": discordId}
     resp = requests.post(
-        "https://oneverse-backend.vercel.app/api/admin/addUser",
-        json=data);
-    status = resp.status_code;
+        "https://oneverse-discord-bot.herokuapp.com/admin/addUser", json=data)
+    status = resp.status_code
     print(status)
     response = resp.json()
 
-    print(response);
+    print(response)
     if (status == 500):
         return False
     elif (status == 200):
@@ -42,12 +60,16 @@ client = commands.Bot(command_prefix="!", intents=intents)
 
 def embedAuth():
     embed = discord.Embed(title="Authentication Requested")
-    embed.add_field(name="Description",
-                    value="You have requested Discord to Metamask connection for role allotment in ONEVerse Server",
-                    inline=False)
-    embed.add_field(name="Note",
-                    value="Make sure the url you're connecting your wallet with is ours, check announcements to know more",
-                    inline=False)
+    embed.add_field(
+        name="Description",
+        value=
+        "You have requested Discord to Metamask connection for role allotment in ONEVerse Server",
+        inline=False)
+    embed.add_field(
+        name="Note",
+        value=
+        "Make sure the url you're connecting your wallet with is ours, check announcements to know more",
+        inline=False)
     embed.add_field(name="Authenticate on our website",
                     value="[Click here](https://oneverse-discord.web.app/)")
     return embed
@@ -83,9 +105,11 @@ refreshOn = False
 async def refresh(ctx):
     global refreshOn
 
-    OneVRoles = ["First Lieutenant", "Brigadier General", "Lieutenant General",
-                 "Senior Commander", "Grand Admiral",
-                 "Constellation Commander", "Galactic Emperor"]
+    OneVRoles = [
+        "First Lieutenant", "Brigadier General", "Lieutenant General",
+        "Senior Commander", "Grand Admiral", "Constellation Commander",
+        "Galactic Emperor"
+    ]
     server = ctx.guild
     roles = server.roles
     roleByName = {}
@@ -115,7 +139,8 @@ async def refresh(ctx):
                 await user.add_roles(roleByName["Brigadier General"])
             elif tokens >= 10:
                 await user.add_roles(roleByName["First Lieutenant"])
-        except: pass
+        except:
+            pass
         return
     if refreshOn:
         print("Already refreshing")
@@ -126,43 +151,54 @@ async def refresh(ctx):
     status = await ctx.send("Starting refresh")
     members = server.members
 
-    for member in members:
-        if not member.guild_permissions.administrator and not member.bot:
-            for y in member.roles:
-                if y.name in OneVRoles:
-                    await member.remove_roles(y)
+    try:
+        for member in members:
+            if not member.guild_permissions.administrator and not member.bot:
+                print(member)
+                for y in member.roles:
+                    if y.name in OneVRoles:
+                        print(y.name)
+                        await member.remove_roles(y)
 
-    A = int(getUsers()['totalPages'])
-    for i in range(A):
-        B = getUsers(i + 1)['docs']
-        for entries in B:
-            user = server.get_member(int(entries['discordId']))
-            try:
-                if user is not None:
-                    tokens = int(entries['balance'])
-                    for y in user.roles:
-                        if y.name in OneVRoles:
-                            await user.remove_roles(y)
-                    if tokens >= 500:
-                        await user.add_roles(roleByName["Galactic Emperor"])
-                    elif tokens >= 250:
-                        await user.add_roles(roleByName["Constellation Commander"])
-                    elif tokens >= 100:
-                        await user.add_roles(roleByName["Grand Admiral"])
-                    elif tokens >= 50:
-                        await user.add_roles(roleByName["Senior Commander"])
-                    elif tokens >= 30:
-                        await user.add_roles(roleByName["Lieutenant General"])
-                    elif tokens >= 20:
-                        await user.add_roles(roleByName["Brigadier General"])
-                    elif tokens >= 10:
-                        await user.add_roles(roleByName["First Lieutenant"])
-                    await status.edit(content="Refreshing "+user.name)
-            except:
-                pass
+        A = int(getUsers()['totalPages'])
 
-    await status.edit(content="Refreshed")
-    refreshOn = False
+        for i in range(A):
+            B = getUsers(i + 1)['docs']
+            for entries in B:
 
+                try:
+                    print(entries)
+                    user = server.get_member(int(entries['discordId']))
+                    print(user)
+                    if user is not None:
+                        tokens = int(entries['balance'])
+                        for y in user.roles:
+                            if y.name in OneVRoles:
+                                await user.remove_roles(y)
+                        if tokens >= 500:
+                            await user.add_roles(roleByName["Galactic Emperor"])
+                        elif tokens >= 250:
+                            await user.add_roles(
+                                roleByName["Constellation Commander"])
+                        elif tokens >= 100:
+                            await user.add_roles(roleByName["Grand Admiral"])
+                        elif tokens >= 50:
+                            await user.add_roles(roleByName["Senior Commander"])
+                        elif tokens >= 30:
+                            await user.add_roles(roleByName["Lieutenant General"])
+                        elif tokens >= 20:
+                            await user.add_roles(roleByName["Brigadier General"])
+                        elif tokens >= 10:
+                            await user.add_roles(roleByName["First Lieutenant"])
+                        await status.edit(content="Refreshing " + user.name)
+                except:
+                    pass
+        await status.edit(content="Refreshed")
+        refreshOn = False
+    except:
+        await status.edit(content="Refresh Failed, try again or contact devs")
+        refreshOn = False
 
 client.run(TOKEN)
+
+
